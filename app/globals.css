@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #fbf7f0;
+  --foreground: #2f2723;
+  --brand: #d9845f;
+  --brand-dark: #b86645;
+  --soft: #f3e2d5;
+  --border: #ead8ca;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top left, #fff7ea 0, var(--background) 38%, #f7efe8 100%);
+  color: var(--foreground);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
