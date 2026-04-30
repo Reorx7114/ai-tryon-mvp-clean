@@ -38,7 +38,7 @@ export default function HomePage() {
   const [inquiry, setInquiry] = useState<InquiryItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [customerPhoto, setCustomerPhoto] = useState<string>("");
-  const [resultReady, setResultReady] = useState(false);
+  const [resultImage, setResultImage] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
@@ -57,24 +57,51 @@ export default function HomePage() {
     const reader = new FileReader();
     reader.onload = () => {
       setCustomerPhoto(String(reader.result));
-      setResultReady(false);
+      setResultImage("");
     };
     reader.readAsDataURL(file);
   }
 
-  function generateMockResult() {
+  async function generateTryOn() {
     if (!customerPhoto || !selectedProduct) {
       alert("請先上傳照片並選擇商品");
       return;
     }
 
-    setIsGenerating(true);
-    setResultReady(false);
+    try {
+      setIsGenerating(true);
+      setResultImage("");
 
-    window.setTimeout(() => {
+      const response = await fetch("/api/tryon", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          customerPhoto,
+          productName: selectedProduct.name,
+          productDescription: selectedProduct.description,
+          productTags: selectedProduct.tags
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result?.error || "產生試穿圖失敗");
+      }
+
+      if (!result?.image) {
+        throw new Error("沒有收到試穿圖");
+      }
+
+      setResultImage(result.image);
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : "產生試穿圖失敗");
+    } finally {
       setIsGenerating(false);
-      setResultReady(true);
-    }, 1200);
+    }
   }
 
   function addToInquiry(product: Product) {
@@ -132,8 +159,8 @@ export default function HomePage() {
             是幫顧客更快做購買判斷
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-600">
-            顧客自己上傳照片、選商品、產生模擬試穿結果，並把喜歡的款式加入詢價單。
-            這版先跑通成交流程，後續再接真正的 AI 試穿 API。
+            顧客自己上傳照片、選商品、產生試穿結果，並把喜歡的款式加入詢價單。
+            現在這版已經會真的呼叫 API 產生 C 圖。
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <a
@@ -155,7 +182,7 @@ export default function HomePage() {
           <h2 className="text-2xl font-black">這版先做到三件事</h2>
           <div className="mt-5 grid gap-3">
             {[
-              ["顧客端", "上傳照片、選商品、產生 mock 試穿結果"],
+              ["顧客端", "上傳照片、選商品、呼叫 API 產生試穿結果"],
               ["成交端", "加入詢價單、複製詢價內容，不強迫導 LINE"],
               ["店主端", "後台管理商品，資料先存在 localStorage"]
             ].map(([title, description]) => (
@@ -192,7 +219,7 @@ export default function HomePage() {
               className="mt-3 rounded-full border border-orange-200 bg-white px-4 py-2 font-bold"
               onClick={() => {
                 setCustomerPhoto("");
-                setResultReady(false);
+                setResultImage("");
               }}
             >
               重新上傳
@@ -211,7 +238,7 @@ export default function HomePage() {
                 }`}
                 onClick={() => {
                   setSelectedProductId(product.id);
-                  setResultReady(false);
+                  setResultImage("");
                 }}
               >
                 <div className="grid h-40 place-items-center bg-orange-100 text-3xl font-black text-orange-700">
@@ -242,25 +269,21 @@ export default function HomePage() {
 
           <button
             className="mt-5 rounded-full bg-orange-600 px-6 py-3 font-black text-white shadow-lg shadow-orange-200"
-            onClick={generateMockResult}
+            onClick={generateTryOn}
           >
             {isGenerating ? "AI 試穿生成中..." : "產生試穿圖"}
           </button>
 
-          <div className="mt-5 grid min-h-[280px] place-items-center rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white p-5 text-center">
-            {isGenerating && <p className="font-bold text-stone-500">正在產生模擬試穿結果...</p>}
+          <div className="mt-5 grid min-h-[320px] place-items-center rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white p-5 text-center">
+            {isGenerating && <p className="font-bold text-stone-500">正在產生試穿結果，請稍候...</p>}
 
-            {!isGenerating && !resultReady && <p className="text-stone-500">請先上傳照片並選擇商品</p>}
+            {!isGenerating && !resultImage && <p className="text-stone-500">請先上傳照片並選擇商品，再按下產生試穿圖</p>}
 
-            {!isGenerating && resultReady && selectedProduct && (
+            {!isGenerating && resultImage && selectedProduct && (
               <div className="w-full max-w-md rounded-3xl border border-orange-100 bg-white p-4 shadow-lg">
-                <div className="grid h-64 place-items-center overflow-hidden rounded-2xl bg-orange-100">
-                  {selectedProduct.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={selectedProduct.image} alt={selectedProduct.name} className="h-full w-full object-cover opacity-90" />
-                  ) : (
-                    <span className="text-5xl font-black text-orange-700">{selectedProduct.name.slice(0, 2)} ✨</span>
-                  )}
+                <div className="grid overflow-hidden rounded-2xl bg-orange-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={resultImage} alt="AI 試穿結果" className="h-full w-full object-cover" />
                 </div>
                 <h3 className="mt-4 text-xl font-black">試穿結果已完成</h3>
                 <p className="mt-1 text-stone-600">
