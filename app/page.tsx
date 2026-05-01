@@ -37,7 +37,7 @@ export default function HomePage() {
   const [products, setProducts] = useState<Product[]>(defaultProducts);
   const [inquiry, setInquiry] = useState<InquiryItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [customerPhoto, setCustomerPhoto] = useState<string>("");
+  const [personPhoto, setPersonPhoto] = useState<string>("");
   const [resultImage, setResultImage] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -56,15 +56,19 @@ export default function HomePage() {
 
     const reader = new FileReader();
     reader.onload = () => {
-      setCustomerPhoto(String(reader.result));
+      setPersonPhoto(String(reader.result));
       setResultImage("");
     };
     reader.readAsDataURL(file);
   }
 
   async function generateTryOn() {
-    if (!customerPhoto || !selectedProduct) {
+    if (!personPhoto || !selectedProduct) {
       alert("請先上傳照片並選擇商品");
+      return;
+    }
+    if (!selectedProduct.image) {
+      alert("此商品目前沒有商品圖，請先到後台補上商品圖後再試穿");
       return;
     }
 
@@ -78,7 +82,8 @@ export default function HomePage() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          customerPhoto,
+          personPhoto,
+          garmentPhoto: selectedProduct.image,
           productName: selectedProduct.name,
           productDescription: selectedProduct.description,
           productTags: selectedProduct.tags
@@ -199,9 +204,9 @@ export default function HomePage() {
         <div className="rounded-3xl border border-orange-100 bg-white/85 p-5 shadow-xl shadow-orange-100">
           <h2 className="text-2xl font-black">1. 上傳自己的照片</h2>
           <div className="mt-4 grid min-h-[280px] place-items-center rounded-3xl border-2 border-dashed border-orange-200 bg-orange-50 p-4 text-center text-stone-500">
-            {customerPhoto ? (
+            {personPhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={customerPhoto} alt="顧客上傳照片" className="max-h-80 rounded-2xl object-contain" />
+              <img src={personPhoto} alt="顧客上傳照片" className="max-h-80 rounded-2xl object-contain" />
             ) : (
               <label className="cursor-pointer">
                 <span className="font-bold">點這裡選擇照片</span>
@@ -214,11 +219,11 @@ export default function HomePage() {
               </label>
             )}
           </div>
-          {customerPhoto && (
+          {personPhoto && (
             <button
               className="mt-3 rounded-full border border-orange-200 bg-white px-4 py-2 font-bold"
               onClick={() => {
-                setCustomerPhoto("");
+                setPersonPhoto("");
                 setResultImage("");
               }}
             >

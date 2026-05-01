@@ -28,16 +28,17 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const {
-      customerPhoto,
-      productName,
-      productDescription,
-      productTags
-    } = body;
+    const { personPhoto, garmentPhoto, productName, productDescription, productTags } = body;
 
-    if (!customerPhoto) {
+    if (!personPhoto) {
       return NextResponse.json(
-        { error: "缺少顧客照片" },
+        { error: "缺少人物照片" },
+        { status: 400 }
+      );
+    }
+    if (!garmentPhoto) {
+      return NextResponse.json(
+        { error: "缺少商品照片" },
         { status: 400 }
       );
     }
@@ -49,18 +50,36 @@ export async function POST(request: Request) {
       );
     }
 
-    const customerImage = dataUrlToBlob(customerPhoto);
+    const personImage = dataUrlToBlob(personPhoto);
+    const garmentImage = dataUrlToBlob(garmentPhoto);
     const tagsText = Array.isArray(productTags) ? productTags.join("、") : "";
 
     const prompt = `
-請編修這張顧客照片，產生一張自然、真實、適合服飾電商展示的試穿效果圖。
+你會收到兩張圖片，請務必執行「照片編修」而不是「重生新人物」。
+- 第一張是人物照（personPhoto）：這是主要目標圖與構圖基準。
+- 第二張是商品照（garmentPhoto）：只用來參考服裝款式。
 
-要求：
-1. 保留原本人物的臉部特徵、髮型、姿勢與整體人物感覺。
-2. 讓人物穿上符合以下商品描述的服裝。
-3. 整體風格自然、寫實、乾淨，不要過度誇張。
-4. 以「服飾試穿展示」為目的，讓成品看起來像完成試穿的成果圖。
-5. 如果原始背景不影響畫面，可保留簡潔背景；若需要，可稍微整理成乾淨自然的背景。
+核心原則（最高優先）：
+1. 必須保留第一張人物照中的同一個人，不可替換成陌生模特兒。
+2. 臉部與身份一致性必須最高：保留原本臉型、五官、髮型、髮色、膚色、表情、年齡感與整體氣質。
+3. 保留原始姿勢、身形比例、手部位置、拍攝角度、鏡頭距離、背景、光線與構圖。
+4. 保留原本配件與手上物品（例如包包、手機、咖啡杯、飾品），不要刪除或替換。
+
+編修範圍限制：
+5. 只修改人物身上的服裝區域，其他區域盡量保持與人物照一致。
+6. 不要重畫臉、頭髮、背景、手與配件，不要新增披肩、外套或其他遮擋物。
+7. 若商品是「上衣/襯衫/背心/小可愛/外套/針織外套」，只改上半身服裝；保留下半身原本穿著。
+8. 若商品是上衣類，禁止把上衣延伸成洋裝、長版上衣或連身裙。
+9. 只有當商品本身是洋裝或下半身服裝時，才可以改動下半身服裝。
+
+服裝還原規則：
+10. 商品照是唯一服裝依據，必須忠實保留顏色、花紋、材質、版型、長度、領口、袖型、貼合度與露肩/平口等關鍵特徵。
+11. 不可增加商品圖中不存在的袖子、領子、裙長、鈕扣、刺繡、胸針或其他裝飾。
+12. 若商品是露肩或平口款，必須保留露肩/平口，不可改成襯衫領或包覆肩膀的款式。
+13. 若商品是外套或針織外套，應呈現「穿上外套」效果，並盡量保留原本內搭邏輯（除非商品照明顯是完整套裝）。
+
+輸出風格：
+14. 請輸出自然真實的顧客試穿照，不要變成棚拍模特兒形象照。
 
 商品名稱：${productName}
 商品說明：${productDescription || "無"}
@@ -69,7 +88,8 @@ export async function POST(request: Request) {
 
     const formData = new FormData();
     formData.append("model", "gpt-image-1");
-    formData.append("image", customerImage, "customer-photo.png");
+    formData.append("image[]", personImage, "person-photo.png");
+    formData.append("image[]", garmentImage, "garment-photo.png");
     formData.append("prompt", prompt);
     formData.append("size", "1024x1024");
 
