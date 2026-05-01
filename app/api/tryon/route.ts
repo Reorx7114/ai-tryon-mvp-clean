@@ -16,6 +16,12 @@ function dataUrlToBlob(dataUrl: string) {
   return new Blob([buffer], { type: mimeType });
 }
 
+function safeText(value: unknown, fallback = "未提供") {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
 export async function POST(request: Request) {
   try {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -34,19 +40,17 @@ export async function POST(request: Request) {
       garmentPhoto,
       productName,
       productDescription,
-      productTags
+      productTags,
+      productCategory
     } = body;
 
     if (!personPhoto) {
-      return NextResponse.json(
-        { error: "缺少人物照片" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "缺少人物照片" }, { status: 400 });
     }
 
     if (!garmentPhoto) {
       return NextResponse.json(
-        { error: "缺少商品照片，請先到後台替商品上傳圖片" },
+        { error: "缺少商品照片，請先替商品設定圖片" },
         { status: 400 }
       );
     }
@@ -55,54 +59,82 @@ export async function POST(request: Request) {
     const garmentImage = dataUrlToBlob(garmentPhoto);
 
     const tagsText = Array.isArray(productTags)
-      ? productTags.join("、")
-      : "";
+      ? productTags.filter(Boolean).join("、")
+      : "未提供";
+
+    const nameText = safeText(productName);
+    const descriptionText = safeText(productDescription);
+    const categoryText = safeText(productCategory, "上衣");
 
     const prompt = `
-請對第一張人物照片做「局部服裝編修」，不是重新生成新照片。
+你是一個電商 AI 試穿修圖助手。請根據「第一張人物照片」與「第二張商品照片」產生試穿預覽圖。
 
-最高優先目標：
-保留第一張照片中的同一個人，只把服裝換成第二張商品圖的服裝。
+重要圖片定義：
+- 第一張圖片：顧客本人照片，只能作為人物、臉、身體、姿勢、背景來源。
+- 第二張圖片：商品照片，是唯一允許參考的服裝來源。
+- 不可以自行想像其他衣服。
+- 不可以使用與第二張商品照片不一致的顏色、條紋、圖案、字母、Logo、版型或材質。
 
-絕對禁止：
-- 不要換臉。
-- 不要重畫臉。
-- 不要美化成另一個人。
-- 不要改變五官、臉型、眼睛、鼻子、嘴巴、膚色、表情。
-- 不要改變髮型、髮色。
-- 不要改變背景、姿勢、手部、包包、杯子、配件。
-- 不要把人物改成棚拍模特兒。
-- 不要改變原照片的構圖與鏡頭距離。
+最高優先規則：
+只把第一張人物照片中「原本穿著的服裝」替換成第二張商品照片中的服裝。
+請盡量保持原照片像是同一張照片被局部改衣服，而不是重新生成新照片。
 
-允許修改的唯一區域：
-只修改人物身上的服裝區域。
+絕對禁止修改：
+- 臉
+- 五官
+- 臉型
+- 表情
+- 膚色
+- 髮型
+- 髮色
+- 手部
+- 姿勢
+- 背景
+- 拍攝角度
+- 鏡頭距離
+- 配件
+- 手上拿的物品
+- 證件、項鍊、手錶、包包等非服裝物件
 
 人物保留要求：
-- 臉必須看起來仍是原圖中的同一個人。
-- 保留原本臉部辨識度。
-- 保留原本表情與氣質。
-- 保留原本身形比例與姿勢。
-- 保留原本光影與照片感。
+- 第一張照片中的人必須仍然是同一個人。
+- 不要美化成另一個人。
+- 不要改成棚拍模特兒。
+- 不要讓臉變成 AI 感。
+- 保留原始照片的光線、真實感與生活照質感。
 
-服裝要求：
-- 第二張商品圖是唯一服裝參考。
-- 忠實保留商品的顏色、條紋、花紋、材質、領口、袖型、長度、版型。
-- 不可新增商品圖不存在的設計。
-- 不可改變衣服種類。
+服裝替換要求：
+- 第二張商品照片是唯一服裝參考。
+- 必須忠實保留商品的主色、條紋、花紋、圖案、字母、材質、領口、袖型、長度與版型。
+- 若商品圖上有明顯文字或圖案，例如英文字、恐龍、條紋、印花，請盡量保留其視覺特徵。
+- 不要產生商品圖不存在的條紋、顏色、圖案或設計。
+- 不要把商品變成另一種衣服。
 - 上衣不可變洋裝。
-- 外套不可變成連身裙。
-- 若商品是上衣或外套，只修改上半身，保留下半身原本服裝。
-- 若原圖有裙子、褲子、腿部，除非商品本身是下半身服裝，否則不要修改。
+- 外套不可變裙子。
+- 若商品是上衣，只修改人物上半身衣服，保留下半身原本狀態。
+- 衣服需要自然貼合人物身形、肩線、手臂與姿勢。
+- 皺褶、布料垂墜與陰影要自然。
+
+如果第一張人物照片中的原服裝和第二張商品服裝類型不同：
+- 仍以第二張商品照片為準。
+- 只替換合理服裝區域。
+- 不要修改不相關身體區域。
 
 輸出要求：
-- 自然、真實、可用於電商試穿預覽。
-- 衣服要自然貼合人體。
-- 保留原照片背景與真實感。
-- 不要生成文字、水印、Logo 或多餘裝飾。
+- 產生自然、真實、可用於電商試穿預覽的照片。
+- 保留原圖構圖。
+- 不要加入水印。
+- 不要加入額外文字。
+- 不要生成拼貼圖。
+- 不要生成多張圖。
+- 不要生成商品展示圖。
+- 只輸出試穿後的人物照片。
 
-商品名稱：${productName || "無"}
-商品描述：${productDescription || "無"}
-商品標籤：${tagsText || "無"}
+商品資訊：
+商品名稱：${nameText}
+商品分類：${categoryText}
+商品描述：${descriptionText}
+商品標籤：${tagsText}
 `;
 
     const formData = new FormData();
@@ -124,6 +156,8 @@ export async function POST(request: Request) {
     const result = await response.json();
 
     if (!response.ok) {
+      console.error("OpenAI image edit error:", result);
+
       return NextResponse.json(
         {
           error: result?.error?.message || "OpenAI 產生圖片失敗",
@@ -149,7 +183,7 @@ export async function POST(request: Request) {
     console.error("tryon route error:", error);
 
     return NextResponse.json(
-      { error: "伺服器處理失敗" },
+      { error: "伺服器處理失敗，請確認圖片格式與商品資料是否正確" },
       { status: 500 }
     );
   }
