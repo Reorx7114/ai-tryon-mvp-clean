@@ -63,18 +63,12 @@ export default function HomePage() {
   }
 
   async function generateTryOn() {
-    if (!personPhoto) {
-      alert("請先上傳人物照片");
+    if (!personPhoto || !selectedProduct) {
+      alert("請先上傳照片並選擇商品");
       return;
     }
-
-    if (!selectedProduct) {
-      alert("請先選擇商品");
-      return;
-    }
-
     if (!selectedProduct.image) {
-      alert("此商品尚未設定商品圖，請先到後台補上商品圖片");
+      alert("此商品目前沒有商品圖，請先到後台補上商品圖後再試穿");
       return;
     }
 
@@ -218,11 +212,7 @@ export default function HomePage() {
           <div className="mt-4 grid min-h-[280px] place-items-center rounded-3xl border-2 border-dashed border-orange-200 bg-orange-50 p-4 text-center text-stone-500">
             {personPhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={personPhoto}
-                alt="顧客上傳照片"
-                className="max-h-80 rounded-2xl object-contain"
-              />
+              <img src={personPhoto} alt="顧客上傳照片" className="max-h-80 rounded-2xl object-contain" />
             ) : (
               <label className="cursor-pointer">
                 <span className="font-bold">點這裡選擇照片</span>
