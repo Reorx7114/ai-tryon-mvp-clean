@@ -4,9 +4,11 @@ export type Product = {
   price: number;
   size: string;
   status: string;
-  image?: string;
-  tags: string[];
   description: string;
+  tags: string[];
+  image: string;
+  shopeeUrl?: string;
+  category?: string;
 };
 
 export type InquiryItem = {
@@ -15,5 +17,5 @@ export type InquiryItem = {
   price: number;
   size: string;
   status: string;
-  image?: string;
+  image: string;
 };
