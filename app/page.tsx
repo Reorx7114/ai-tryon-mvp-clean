@@ -165,7 +165,7 @@ export default function HomePage() {
           </h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-stone-600">
             顧客自己上傳照片、選商品、產生試穿結果，並把喜歡的款式加入詢價單。
-            現在這版已經會真的呼叫 API 產生 C 圖。
+            目前這版會同時送出人物照與商品圖，提升人物相似度與服裝還原度。
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <a
@@ -187,11 +187,14 @@ export default function HomePage() {
           <h2 className="text-2xl font-black">這版先做到三件事</h2>
           <div className="mt-5 grid gap-3">
             {[
-              ["顧客端", "上傳照片、選商品、呼叫 API 產生試穿結果"],
+              ["顧客端", "上傳人物照片、選商品、呼叫 API 產生試穿結果"],
               ["成交端", "加入詢價單、複製詢價內容，不強迫導 LINE"],
               ["店主端", "後台管理商品，資料先存在 localStorage"]
             ].map(([title, description]) => (
-              <div key={title} className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
+              <div
+                key={title}
+                className="rounded-2xl border border-orange-100 bg-orange-50 p-4"
+              >
                 <strong>{title}</strong>
                 <p className="mt-1 text-sm text-stone-600">{description}</p>
               </div>
@@ -200,7 +203,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="try" className="mx-auto mt-12 grid max-w-7xl gap-5 lg:grid-cols-[0.9fr_1.25fr_0.85fr]">
+      <section
+        id="try"
+        className="mx-auto mt-12 grid max-w-7xl gap-5 lg:grid-cols-[0.9fr_1.25fr_0.85fr]"
+      >
         <div className="rounded-3xl border border-orange-100 bg-white/85 p-5 shadow-xl shadow-orange-100">
           <h2 className="text-2xl font-black">1. 上傳自己的照片</h2>
           <div className="mt-4 grid min-h-[280px] place-items-center rounded-3xl border-2 border-dashed border-orange-200 bg-orange-50 p-4 text-center text-stone-500">
@@ -214,7 +220,9 @@ export default function HomePage() {
                   type="file"
                   accept="image/*"
                   className="mt-4 block w-full text-sm"
-                  onChange={(event) => handlePhotoUpload(event.target.files?.[0])}
+                  onChange={(event) =>
+                    handlePhotoUpload(event.target.files?.[0])
+                  }
                 />
               </label>
             )}
@@ -239,7 +247,9 @@ export default function HomePage() {
               <button
                 key={product.id}
                 className={`overflow-hidden rounded-3xl border-2 bg-white text-left shadow-md transition ${
-                  selectedProductId === product.id ? "border-orange-500 -translate-y-1" : "border-transparent"
+                  selectedProductId === product.id
+                    ? "border-orange-500 -translate-y-1"
+                    : "border-transparent"
                 }`}
                 onClick={() => {
                   setSelectedProductId(product.id);
@@ -249,24 +259,38 @@ export default function HomePage() {
                 <div className="grid h-40 place-items-center bg-orange-100 text-3xl font-black text-orange-700">
                   {product.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     product.name.slice(0, 2)
                   )}
                 </div>
                 <div className="p-4">
                   <h3 className="font-black">{product.name}</h3>
-                  <p className="mt-1 font-black text-orange-700">{money(product.price)}</p>
+                  <p className="mt-1 font-black text-orange-700">
+                    {money(product.price)}
+                  </p>
                   <p className="mt-1 text-sm text-stone-500">
                     尺寸：{product.size}｜{product.status}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {product.tags.map((tag) => (
-                      <span key={tag} className="rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-700">
+                      <span
+                        key={tag}
+                        className="rounded-full bg-orange-100 px-2 py-1 text-xs font-bold text-orange-700"
+                      >
                         {tag}
                       </span>
                     ))}
                   </div>
+                  {!product.image && (
+                    <p className="mt-3 text-xs font-bold text-red-500">
+                      此商品尚未設定圖片，無法生成試穿圖
+                    </p>
+                  )}
                 </div>
               </button>
             ))}
@@ -280,15 +304,27 @@ export default function HomePage() {
           </button>
 
           <div className="mt-5 grid min-h-[320px] place-items-center rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white p-5 text-center">
-            {isGenerating && <p className="font-bold text-stone-500">正在產生試穿結果，請稍候...</p>}
+            {isGenerating && (
+              <p className="font-bold text-stone-500">
+                正在產生試穿結果，請稍候...
+              </p>
+            )}
 
-            {!isGenerating && !resultImage && <p className="text-stone-500">請先上傳照片並選擇商品，再按下產生試穿圖</p>}
+            {!isGenerating && !resultImage && (
+              <p className="text-stone-500">
+                請先上傳照片並選擇商品，再按下產生試穿圖
+              </p>
+            )}
 
             {!isGenerating && resultImage && selectedProduct && (
               <div className="w-full max-w-md rounded-3xl border border-orange-100 bg-white p-4 shadow-lg">
                 <div className="grid overflow-hidden rounded-2xl bg-orange-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={resultImage} alt="AI 試穿結果" className="h-full w-full object-cover" />
+                  <img
+                    src={resultImage}
+                    alt="AI 試穿結果"
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <h3 className="mt-4 text-xl font-black">試穿結果已完成</h3>
                 <p className="mt-1 text-stone-600">
@@ -331,10 +367,16 @@ export default function HomePage() {
               </div>
             )}
           </div>
-          <button className="mt-4 w-full rounded-full bg-orange-600 px-5 py-3 font-black text-white" onClick={copyInquiry}>
+          <button
+            className="mt-4 w-full rounded-full bg-orange-600 px-5 py-3 font-black text-white"
+            onClick={copyInquiry}
+          >
             複製詢價內容
           </button>
-          <button className="mt-3 w-full rounded-full border border-orange-200 bg-white px-5 py-3 font-black" onClick={clearInquiry}>
+          <button
+            className="mt-3 w-full rounded-full border border-orange-200 bg-white px-5 py-3 font-black"
+            onClick={clearInquiry}
+          >
             清空詢價單
           </button>
         </aside>
