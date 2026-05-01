@@ -4,11 +4,9 @@ export type Product = {
   price: number;
   size: string;
   status: string;
-  description: string;
-  tags: string[];
   image: string;
-  shopeeUrl?: string;
-  category?: string;
+  tags: string[];
+  description: string;
 };
 
 export type InquiryItem = {
