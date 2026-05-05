@@ -51,16 +51,68 @@ export default function HomePage() {
     [products, selectedProductId]
   );
 
-  function handlePhotoUpload(file?: File) {
-    if (!file) return;
-
+  async function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      setPersonPhoto(String(reader.result));
-      setResultImage("");
+
+    reader.onerror = () => {
+      reject(new Error("圖片讀取失敗"));
     };
+
+    reader.onload = (event) => {
+      const img = new Image();
+
+      img.onerror = () => {
+        reject(new Error("圖片載入失敗"));
+      };
+
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+
+        const MAX_WIDTH = 1024;
+        const MAX_HEIGHT = 1024;
+
+        const scale = Math.min(
+          1,
+          MAX_WIDTH / img.width,
+          MAX_HEIGHT / img.height
+        );
+
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          reject(new Error("圖片壓縮失敗"));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const compressed = canvas.toDataURL("image/jpeg", 0.72);
+        resolve(compressed);
+      };
+
+      img.src = String(event.target?.result || "");
+    };
+
     reader.readAsDataURL(file);
+  });
+}
+
+async function handlePhotoUpload(file?: File) {
+  if (!file) return;
+
+  try {
+    const compressed = await compressImage(file);
+    setPersonPhoto(compressed);
+    setResultImage("");
+  } catch (error) {
+    console.error(error);
+    alert(error instanceof Error ? error.message : "圖片處理失敗，請重新選擇照片");
   }
+}
 
   async function generateTryOn() {
     if (!personPhoto) {
